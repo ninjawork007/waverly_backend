@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "retailer_wholesales",
+  "info": {
+    "singularName": "retailer-wholesale",
+    "pluralName": "retailer-wholesales",
+    "displayName": "Retailer and Wholesale"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "DBA": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "website": {
+      "type": "string"
+    },
+    "street": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "number_of_stores": {
+      "type": "string"
+    },
+    "est_monthly_purchases": {
+      "type": "string"
+    }
+  }
+}

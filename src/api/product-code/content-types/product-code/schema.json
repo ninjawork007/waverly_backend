@@ -1,0 +1,28 @@
+{
+  "kind": "collectionType",
+  "collectionName": "product_codes",
+  "info": {
+    "singularName": "product-code",
+    "pluralName": "product-codes",
+    "displayName": "Product Code",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "pin": {
+      "type": "string",
+      "unique": true,
+      "required": true
+    },
+    "scanCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "verificationDate": {
+      "type": "datetime"
+    }
+  }
+}
