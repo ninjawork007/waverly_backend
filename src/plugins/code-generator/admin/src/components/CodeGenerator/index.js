@@ -35,7 +35,7 @@ class App extends Component {
     let _this = this;
     this.setState({isGenerating: true})
     axios
-      .post(`${CUSTOM_VARIABLES.API_URL}/api/product-codes/generate`, {
+      .post(`/api/product-codes/generate`, {
         numberOfCodes: this.state.numberOfCodes,
       })
       .then(
