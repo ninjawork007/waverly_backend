@@ -23,20 +23,25 @@ module.exports = createCoreController(
     async generate(ctx) {
       try {
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
-
+        console.log("numberOfCodes", numberOfCodes)
         let createdCodes = [];
-
+        const currentData = await strapi.db.query("api::product-code.product-code").findMany();
+        
+        const set = new Set();
+        currentData.forEach(({pin}) => {
+          set.add(pin);
+        }) 
         for (let i = 0; i < numberOfCodes; i++) {
           let code = makeCode();
-
-          let existingCode = await strapi.db
-            .query("api::product-code.product-code")
-            .findOne({
-              select: ["pin"],
-              where: { pin: code },
-            });
-          console.log({ existingCode, codeNumber: i });
-          if (existingCode) {
+          // let existingCode = await strapi.db
+          //   .query("api::product-code.product-code")
+          //   .findOne({
+          //     select: ["pin"],
+          //     where: { pin: code },
+          //   });
+          let existingCode = set.has(code);
+          // console.log({ existingCode, codeNumber: i });
+          if (existingCode) { 
             i--;
           } else {
             let createdCode = await strapi
@@ -50,6 +55,7 @@ module.exports = createCoreController(
             delete createdCode.scanCount;
 
             createdCodes.push(createdCode);
+            set.add(code);
           }
         }
 
