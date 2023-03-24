@@ -49,6 +49,7 @@ module.exports = createCoreController(
           } else {
             let createdCode = { pin: code, scanCount: 0 }
             createdCodes.push(createdCode);
+            set.add(code)
           }
         }
         for (let round = 0; round < createdCodes.length; round += 16000) {
