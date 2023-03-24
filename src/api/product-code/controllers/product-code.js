@@ -5,7 +5,12 @@
  */
 
 const { createCoreController } = require("@strapi/strapi").factories;
-
+const path = require('path');
+const config = "config"
+const dataDir = path.join(config, "data")
+const lastInsertedFilePath = path.join(dataDir, 'lastInserted.txt')
+const generatedCode = path.join(dataDir, 'generatedCode.json')
+const fs = require('fs');
 function makeCode() {
   var length = 6;
   var result = "";
@@ -22,43 +27,42 @@ module.exports = createCoreController(
   ({ strapi }) => ({
     async generate(ctx) {
       try {
+        let beforeTime = Date.now();
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
         console.log("numberOfCodes", numberOfCodes)
+        let currentData = await strapi.db.query("api::product-code.product-code").findMany();
         let createdCodes = [];
-        const currentData = await strapi.db.query("api::product-code.product-code").findMany();
-        
+
+        console.log("Data..")
         const set = new Set();
-        currentData.forEach(({pin}) => {
+        currentData.forEach(({ pin }) => {
           set.add(pin);
-        }) 
-        for (let i = 0; i < numberOfCodes; i++) {
-          let code = makeCode();
-          // let existingCode = await strapi.db
-          //   .query("api::product-code.product-code")
-          //   .findOne({
-          //     select: ["pin"],
-          //     where: { pin: code },
-          //   });
+        });
+        let extra = 0;
+        for (let i = 0; i < numberOfCodes + extra; i++) {
+          const code = makeCode();
+
           let existingCode = set.has(code);
-          // console.log({ existingCode, codeNumber: i });
-          if (existingCode) { 
-            i--;
+          if (existingCode) {
+            // i--;
+            extra++;
           } else {
-            let createdCode = await strapi
-              .service("api::product-code.product-code")
-              .create({ data: { pin: code, scanCount: 0 } });
-
-            //remove unnecessary fields for csv export
-            delete createdCode.publishedAt;
-            delete createdCode.createdAt;
-            delete createdCode.updatedAt;
-            delete createdCode.scanCount;
-
+            let createdCode = { pin: code, scanCount: 0 }
             createdCodes.push(createdCode);
-            set.add(code);
           }
         }
+        for (let round = 0; round < createdCodes.length; round += 16000) {
+          
+          const to = Math.min(createdCodes.length, round + 16000)
+          await strapi
+            .query("api::product-code.product-code")
+            .createMany({ data: createdCodes.slice(round, to) });
+          console.log(createdCodes.length);
 
+        }
+        let afterTime = Date.now();
+        console.log((afterTime - beforeTime) / 1000);
+        // console.log(createdCodes.length);
         ctx.send(createdCodes);
       } catch (err) {
         ctx.response.status = 406;
