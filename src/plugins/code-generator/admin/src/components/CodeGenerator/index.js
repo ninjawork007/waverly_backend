@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import axios from "axios";
 // import { CSVLink } from 'react-csv'
 import { CSVLink } from "react-csv/lib";
-
+import ReactPaginate from 'react-paginate';
 import { Box } from "@strapi/design-system/Box";
 import { Typography } from "@strapi/design-system/Typography";
 import { Button } from "@strapi/design-system/Button";
@@ -24,11 +24,12 @@ import {
 } from "@strapi/design-system/Field";
 import { Stack } from "@strapi/design-system/Stack";
 import { Divider } from "@strapi/design-system/Divider";
-
+import styles from './Code.modules.css'
+const itemsPerPage = 1000
 class App extends Component {
   constructor(props) {
     super(props);
-    this.state = { numberOfCodes: "", codes: null, isGenerating: false };
+    this.state = { numberOfCodes: "", codes: null, isGenerating: false, itemOffset: 0 };
   }
 
   handleSubmit = (event) => {
@@ -54,6 +55,19 @@ class App extends Component {
   };
 
   render() {
+  let endOffset
+  let currentItems
+  let pageCount = 0;
+  if(this.state.codes) {
+     endOffset = this.state.itemOffset + itemsPerPage;
+     currentItems = this.state.codes.slice(this.state.itemOffset, endOffset);
+     pageCount = Math.ceil(this.state.codes.length / itemsPerPage);
+  }
+
+  const handlePageClick = (event) => {
+    const newOffset = (event.selected * itemsPerPage) % this.state.codes.length;
+    this.setState({itemOffset: newOffset});
+  };
     return (
       <Box background="neutral100">
         <Layout>
@@ -85,6 +99,25 @@ class App extends Component {
               <Divider />
             </Box>
             <div id="download-csv">
+            <ReactPaginate
+              previousLabel="Previous"
+              nextLabel="Next"
+              pageClassName={styles.pageItem}
+              pageLinkClassName={styles.pageLink}
+              previousClassName={styles.pageItem}
+              previousLinkClassName={styles.pageLink}
+              nextClassName={styles.pageItem}
+              nextLinkClassName={styles.pageLink}
+              breakLabel="..."
+              breakClassName={styles.pageItem}
+              breakLinkClassName={styles.pageLink}
+              containerClassName={styles.pagination}
+              activeClassName={styles.active}
+              onPageChange={handlePageClick}
+              pageRangeDisplayed={5}
+              pageCount={pageCount}
+              renderOnZeroPageCount={null}
+            />
               {this.state.codes && (
                 <div>
                   <CSVLink data={this.state.codes}>
@@ -92,7 +125,7 @@ class App extends Component {
                   </CSVLink>
 
                   <GridLayout>
-                    {this.state.codes.map((code) => (
+                    {currentItems.map((code) => (
                       <Box
                         padding={4}
                         hasRadius
