@@ -22,23 +22,6 @@ function makeCode() {
   return result;
 }
 
-const binarySearch = (arr, code) => {
-  let i = 0; 
-  let j = arr.length - 1;
-  while(i <= j) {
-    const mid = Math.floor((j+i)/2);
-    const pivot = arr[mid];
-    const result = pivot.toString().localeCompare(code.toString());
-    if(result == 0)
-      return true;
-    if(result == -1) {
-      i = mid + 1;
-    }else {
-      j = mid-1;
-    }
-  }
-  return false;
-}
 module.exports = createCoreController(
   "api::product-code.product-code",
   ({ strapi }) => ({
@@ -47,51 +30,35 @@ module.exports = createCoreController(
         let beforeTime = Date.now();
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
         console.log("numberOfCodes", numberOfCodes)
-        let currentData = (await strapi.db.query("api::product-code.product-code").findMany()).map(({pin}) => pin.toString());
+        let currentData = await strapi.db.query("api::product-code.product-code").findMany();
         let createdCodes = [];
-        currentData.sort();
-        console.log("Over1");
-        for (let i = 0; i < numberOfCodes ; i++) {
-          const code = makeCode();
-          createdCodes.push(code);
-        }
-        createdCodes.sort(); 
-        console.log("Over2");
-        let tempArray = []; 
-        let i = 0;
-        for (; i < createdCodes.length - 1; i++) {
-          let flag = true;
-          while (
-            i < createdCodes.length - 1 &&
-            createdCodes[i] == createdCodes[i + 1]
-          ) {
-            i++;
-            flag = false;
-          }
-          if (flag) tempArray.push(createdCodes[i]);
-        }
-        if(i < createdCodes.length ){
-          tempArray.push(createdCodes[i]);
-        }
-        createdCodes = tempArray; 
-        i = 0;
-        let j = 0;
-        tempArray = [];
-        for(let i = 0; i < createdCodes.length; i++) {
-          const a = createdCodes[i];
-          //binary search
-          if(!binarySearch(currentData, a)) {
-            tempArray.push(a);
-          }
-        }
-        createdCodes = tempArray;
-        createdCodes = createdCodes.map(pin => ({pin, scanCount: 0}))
-        for (let round = 0; round < createdCodes.length; round += 16000) {
 
+        console.log("Data..")
+        const set = new Set();
+        currentData.forEach(({ pin }) => {
+          set.add(pin);
+        });
+        let extra = 0;
+        for (let i = 0; i < numberOfCodes + extra; i++) {
+          const code = makeCode();
+
+          let existingCode = set.has(code);
+          if (existingCode) {
+            // i--;
+            extra++;
+          } else {
+            let createdCode = { pin: code, scanCount: 0 }
+            createdCodes.push(createdCode);
+            set.add(code)
+          }
+        }
+        for (let round = 0; round < createdCodes.length; round += 16000) {
+          
           const to = Math.min(createdCodes.length, round + 16000)
           await strapi
             .query("api::product-code.product-code")
-            .createMany({ data: createdCodes.slice(round, to) }); 
+            .createMany({ data: createdCodes.slice(round, to) });
+          console.log(createdCodes.length);
 
         }
         let afterTime = Date.now();
