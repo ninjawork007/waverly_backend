@@ -17,6 +17,7 @@
     "@strapi/plugin-users-permissions": "4.1.1",
     "@strapi/provider-upload-aws-s3": "^4.1.12",
     "@strapi/strapi": "4.1.1",
+    "papaparse": "^5.4.1",
     "pg": "^8.7.3",
     "pg-connection-string": "^2.5.0",
     "react-paginate": "^8.1.4",
