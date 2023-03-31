@@ -9,7 +9,6 @@ const path = require('path');
 const config = "config"
 const dataDir = path.join(config, "data")
 const lastInsertedFilePath = path.join(dataDir, 'lastInserted.txt')
-const shuffleDir = path.join('data', "shuffle");
 const generatedCode = path.join(dataDir, 'generatedCode.json')
 const fs = require('fs');
 function makeCode() {
@@ -22,40 +21,63 @@ function makeCode() {
   }
   return result;
 }
-const eachFile = 100000;
+
 module.exports = createCoreController(
   "api::product-code.product-code",
   ({ strapi }) => ({
     async generate(ctx) {
       try {
         let beforeTime = Date.now();
-        let numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
+        const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
         console.log("numberOfCodes", numberOfCodes)
-        // let lastFetched = 100002;
-        let lastFetched = parseInt(fs.readFileSync(lastInsertedFilePath)); 
-        let lastFetchedTemp = lastFetched;
-        let createdCodes = [];
-        while (numberOfCodes > 0) {
-          const offset = Math.floor(lastFetched / eachFile);
-          const start = lastFetched - offset * eachFile
-          const data = JSON.parse(fs.readFileSync(path.join(shuffleDir, `${offset}.json`)));
-          const end = Math.min(start + numberOfCodes, eachFile)
-          const requireData = data.slice(start, end);
-          numberOfCodes -= requireData.length;
-          lastFetched += requireData.length;
-          createdCodes = createdCodes.concat(requireData);
-        }
-        createdCodes = createdCodes.map((pin) => ({ pin, scanCount: 0 }));
-        console.log(createdCodes.length);
-        for (let round = 0; round < createdCodes.length; round += 16000) {
 
+        let set = new Set();
+        let createdCodes = [];
+        for (let i = 0; i < numberOfCodes; i++) {
+          const code = makeCode();
+          let existingCode = set.has(code);
+          if (!existingCode) {
+            let createdCode = code;
+            createdCodes.push(createdCode);
+            set.add(code)
+          }
+        }
+        let currentData = [];
+        let offset = 0;
+        let limit = 50000;
+        let cleanCheat = new Map();
+        for (let i = 0; i < createdCodes.length; i++) {
+          cleanCheat.set(createdCodes[i], true);
+        } 
+        do {
+          set.clear();
+          currentData = (await strapi.db.query("api::product-code.product-code").findMany({
+            offset,
+            limit,
+          })).map(({pin}) => ({pin}));
+          currentData.forEach(({ pin }) => {
+            set.add(pin);
+          });
+          offset += limit;
+          console.log(`Round: ${offset/limit}`);
+          for (let i = 0; i < createdCodes.length; i++) {
+              cleanCheat.set(createdCodes[i], !set.has(createdCodes[i]) && cleanCheat.get(createdCodes[i]));
+          }
+        } while (currentData.length > 0);
+        createdCodes = [];
+        for (let [key, value] of cleanCheat) {
+          if (value) {
+            createdCodes.push({ pin: key, scanCount: 0 });
+          }
+        }
+
+        for (let round = 0; round < createdCodes.length; round += 16000) {
           const to = Math.min(createdCodes.length, round + 16000)
           await strapi
             .query("api::product-code.product-code")
-            .createMany({ data: createdCodes.slice(round, to) });
+            .createMany({ data: createdCodes.slice(round, to) }); 
 
         }
-        fs.writeFileSync(lastInsertedFilePath, (lastFetchedTemp + createdCodes.length).toString());
         let afterTime = Date.now();
         console.log((afterTime - beforeTime) / 1000);
         // console.log(createdCodes.length);
