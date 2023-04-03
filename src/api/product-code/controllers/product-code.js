@@ -5,12 +5,11 @@
  */
 
 const { createCoreController } = require("@strapi/strapi").factories;
-const path = require('path');
-const config = "config"
-const dataDir = path.join(config, "data")
-const lastInsertedFilePath = path.join(dataDir, 'lastInserted.txt')
-const generatedCode = path.join(dataDir, 'generatedCode.json')
-const fs = require('fs');
+const { createClient } = require('redis');
+
+const client = createClient();
+let isCached = false;
+let lock = false;
 function makeCode() {
   var length = 6;
   var result = "";
@@ -21,66 +20,81 @@ function makeCode() {
   }
   return result;
 }
+client.connect();
 
 module.exports = createCoreController(
   "api::product-code.product-code",
   ({ strapi }) => ({
     async generate(ctx) {
-      try {
+      try {  
+        
         let beforeTime = Date.now();
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
-        console.log("numberOfCodes", numberOfCodes)
-
+        let calls = [];
+        console.log("numberOfCodes", numberOfCodes);
+        if(!isCached && !lock) {
+          lock = true;
+          console.log("Please wait while caching")
+          let currentData = [];
+          let offset = 0;
+          let limit = 50000; 
+          do { 
+          const currentData = (await strapi.db.query("api::product-code.product-code").findMany({
+              offset,
+              limit,
+            })).map(({ pin }) => {
+              return pin
+            });  
+            for(let i = 0; i < currentData.length; i++) { 
+               calls.push(client.set(currentData[i], 1));
+            }
+            offset += limit;
+            console.log(`Round: ${offset / limit}`); 
+          } while (currentData.length > 0);
+          await Promise.all(calls);
+          isCached = true;
+          lock = false;
+        }
+        
+        calls = [];
         let set = new Set();
         let createdCodes = [];
+        let generatedCodes = [];
         for (let i = 0; i < numberOfCodes; i++) {
           const code = makeCode();
           let existingCode = set.has(code);
-          if (!existingCode) {
-            let createdCode = code;
-            createdCodes.push(createdCode);
+          if (!existingCode) { 
             set.add(code)
+            generatedCodes.push(code); 
           }
-        }
-        let currentData = [];
-        let offset = 0;
-        let limit = 50000;
-        let cleanCheat = new Map();
-        for (let i = 0; i < createdCodes.length; i++) {
-          cleanCheat.set(createdCodes[i], true);
         } 
-        do {
-          set.clear();
-          currentData = (await strapi.db.query("api::product-code.product-code").findMany({
-            offset,
-            limit,
-          })).map(({pin}) => ({pin}));
-          currentData.forEach(({ pin }) => {
-            set.add(pin);
-          });
-          offset += limit;
-          console.log(`Round: ${offset/limit}`);
-          for (let i = 0; i < createdCodes.length; i++) {
-              cleanCheat.set(createdCodes[i], !set.has(createdCodes[i]) && cleanCheat.get(createdCodes[i]));
-          }
-        } while (currentData.length > 0);
-        createdCodes = [];
-        for (let [key, value] of cleanCheat) {
-          if (value) {
-            createdCodes.push({ pin: key, scanCount: 0 });
+        for (let i = 0; i < generatedCodes.length; i++) {
+          const code = generatedCodes[i];
+          calls.push(client.get(code));
+        } 
+        const data = await Promise.all(calls);
+
+        console.log(data);
+        calls = [];
+        for(let i = 0; i < generatedCodes.length; i++) {
+          const code = generatedCodes[i];
+          if(data[i] != 1) {
+            createdCodes.push({pin: code, scanCount: 0});
+            calls.push(client.set(code, 1));
           }
         }
+        await Promise.all(calls);
 
         for (let round = 0; round < createdCodes.length; round += 16000) {
           const to = Math.min(createdCodes.length, round + 16000)
           await strapi
             .query("api::product-code.product-code")
-            .createMany({ data: createdCodes.slice(round, to) }); 
+            .createMany({ data: createdCodes.slice(round, to) });
 
         }
         let afterTime = Date.now();
         console.log((afterTime - beforeTime) / 1000);
-        // console.log(createdCodes.length);
+        console.log(createdCodes.length);
         ctx.send(createdCodes);
       } catch (err) {
         ctx.response.status = 406;

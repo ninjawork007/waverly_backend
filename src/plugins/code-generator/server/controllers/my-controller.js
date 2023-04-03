@@ -5,6 +5,6 @@ module.exports = {
     ctx.body = strapi
       .plugin('code-generator')
       .service('myService')
-      .getWelcomeMessage();
+      .getWelcomeMessage()
   },
 };
