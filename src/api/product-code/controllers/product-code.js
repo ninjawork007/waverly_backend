@@ -5,13 +5,6 @@
  */
 
 const { createCoreController } = require("@strapi/strapi").factories;
-<<<<<<< HEAD
-const { createClient } = require('redis');
-
-const client = createClient();
-let isCached = false;
-let lock = false;
-=======
 const path = require('path');
 const config = "config"
 const dataDir = path.join(config, "data")
@@ -30,7 +23,6 @@ let lock = false;
 client.connect();
 const fs = require('fs');
 
->>>>>>> code-upload
 function makeCode() {
   var length = 6;
   var result = "";
@@ -48,84 +40,29 @@ module.exports = createCoreController(
   ({ strapi }) => ({
 
     async generate(ctx) {
-<<<<<<< HEAD
-      try {  
-        
-=======
       try {
 
->>>>>>> code-upload
         let beforeTime = Date.now();
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
         let calls = [];
         console.log("numberOfCodes", numberOfCodes);
-<<<<<<< HEAD
-        if(!isCached && !lock) {
-=======
         console.log("process.env.REDIS_URL", process.env.REDIS_URL);
         if (!isCached) {  
           if (lock) {
             return;
           }
->>>>>>> code-upload
           lock = true;
           console.log("Please wait while caching")
           let currentData = [];
           let offset = 0;
-<<<<<<< HEAD
-          let limit = 50000; 
-          do { 
-          const currentData = (await strapi.db.query("api::product-code.product-code").findMany({
-=======
           let limit = 50000;
           do {
             calls = [];
             currentData = (await strapi.db.query("api::product-code.product-code").findMany({
->>>>>>> code-upload
               offset,
               limit,
             })).map(({ pin }) => {
               return pin
-<<<<<<< HEAD
-            });  
-            for(let i = 0; i < currentData.length; i++) { 
-               calls.push(client.set(currentData[i], 1));
-            }
-            offset += limit;
-            console.log(`Round: ${offset / limit}`); 
-          } while (currentData.length > 0);
-          await Promise.all(calls);
-          isCached = true;
-          lock = false;
-        }
-        
-        calls = [];
-        let set = new Set();
-        let createdCodes = [];
-        let generatedCodes = [];
-        for (let i = 0; i < numberOfCodes; i++) {
-          const code = makeCode();
-          let existingCode = set.has(code);
-          if (!existingCode) { 
-            set.add(code)
-            generatedCodes.push(code); 
-          }
-        } 
-        for (let i = 0; i < generatedCodes.length; i++) {
-          const code = generatedCodes[i];
-          calls.push(client.get(code));
-        } 
-        const data = await Promise.all(calls);
-
-        console.log(data);
-        calls = [];
-        for(let i = 0; i < generatedCodes.length; i++) {
-          const code = generatedCodes[i];
-          if(data[i] != 1) {
-            createdCodes.push({pin: code, scanCount: 0});
-            calls.push(client.set(code, 1));
-          }
-=======
             });
             for (let i = 0; i < currentData.length; i++) {
               calls.push(client.set(currentData[i], 1));
@@ -205,7 +142,6 @@ module.exports = createCoreController(
           numberOfCodes -= requireData.length;
           lastFetched += requireData.length;
           createdCodes = createdCodes.concat(requireData);
->>>>>>> code-upload
         }
         await Promise.all(calls);
 
