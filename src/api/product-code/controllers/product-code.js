@@ -12,7 +12,7 @@ const lastInsertedFilePath = path.join(dataDir, 'lastInserted.txt')
 const shuffleDir = path.join('data', "shuffle");
 const generatedCode = path.join(dataDir, 'generatedCode.json')
 const { createClient } = require('redis');
-
+console.log("process.env.REDIS_URL", process.env.REDIS_URL);
 const client = createClient({
   url: process.env.REDIS_URL
 });
@@ -33,8 +33,7 @@ function makeCode() {
   }
   return result;
 }
-client.connect();
-
+const eachFile = 100000;
 module.exports = createCoreController(
   "api::product-code.product-code",
   ({ strapi }) => ({
@@ -143,15 +142,17 @@ module.exports = createCoreController(
           lastFetched += requireData.length;
           createdCodes = createdCodes.concat(requireData);
         }
-        await Promise.all(calls);
-
+        createdCodes = createdCodes.map((pin) => ({ pin, scanCount: 0 }));
+        console.log(createdCodes.length);
         for (let round = 0; round < createdCodes.length; round += 16000) {
+
           const to = Math.min(createdCodes.length, round + 16000)
           await strapi
             .query("api::product-code.product-code")
             .createMany({ data: createdCodes.slice(round, to) });
 
         }
+        fs.writeFileSync(lastInsertedFilePath, (lastFetchedTemp + createdCodes.length).toString());
         let afterTime = Date.now();
         console.log((afterTime - beforeTime) / 1000);
         console.log(createdCodes.length);
