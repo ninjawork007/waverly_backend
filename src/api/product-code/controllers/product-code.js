@@ -13,7 +13,11 @@ const shuffleDir = path.join('data', "shuffle");
 const generatedCode = path.join(dataDir, 'generatedCode.json')
 const { createClient } = require('redis');
 
-const client = createClient();
+const client = createClient({
+  url: process.env.REDIS_URL
+});
+
+// const client = createClient();
 let isCached = false;
 let lock = false;
 client.connect();
@@ -41,20 +45,19 @@ module.exports = createCoreController(
         const numberOfCodes = parseInt(ctx.request.body.numberOfCodes);
         let calls = [];
         console.log("numberOfCodes", numberOfCodes);
-        if (!isCached && !lock) {
-          ctx.response.status = 400;
-
-          ctx.response.message = "Please try after some time. data is caching.";
+        console.log("process.env.REDIS_URL", process.env.REDIS_URL);
+        if (!isCached) {  
           if (lock) {
             return;
           }
           lock = true;
-          console.log("Please waubit while caching")
+          console.log("Please wait while caching")
           let currentData = [];
           let offset = 0;
           let limit = 50000;
           do {
-            const currentData = (await strapi.db.query("api::product-code.product-code").findMany({
+            calls = [];
+            currentData = (await strapi.db.query("api::product-code.product-code").findMany({
               offset,
               limit,
             })).map(({ pin }) => {
@@ -65,8 +68,8 @@ module.exports = createCoreController(
             }
             offset += limit;
             console.log(`Round: ${offset / limit}`);
+            await Promise.all(calls);
           } while (currentData.length > 0);
-          await Promise.all(calls);
           isCached = true;
           lock = false;
         }
