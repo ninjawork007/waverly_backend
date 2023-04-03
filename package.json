@@ -21,6 +21,7 @@
     "pg": "^8.7.3",
     "pg-connection-string": "^2.5.0",
     "react-paginate": "^8.1.4",
+    "redis": "^4.6.5",
     "sqlite3": "5.0.2",
     "strapi-plugin-import-export-entries": "^1.6.3"
   },
