@@ -3,8 +3,8 @@
 module.exports = {
   index(ctx) {
     ctx.body = strapi
-      .plugin('code-generator')
+      .plugin('code-uploader')
       .service('myService')
-      .getWelcomeMessage()
+      .getWelcomeMessage();
   },
 };

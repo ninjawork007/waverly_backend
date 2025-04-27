@@ -1,0 +1,21 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "ddb",
+            "database": "${workspaceFolder:waverly_backend}/.tmp/data.db"
+        },
+        {
+            "previewLimit": 50,
+            "server": "192.168.29.183",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "username": "test",
+            "name": "postgres local",
+            "password": "test123",
+            "database": "test"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
+}

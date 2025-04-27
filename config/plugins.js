@@ -4,6 +4,10 @@ module.exports = ({ env }) => ({
     enabled: true,
     resolve: './src/plugins/code-generator' // path to plugin folder
   },
+  'code-uploader': {
+    enabled: true,
+    resolve: './src/plugins/code-uploader' // path to plugin folder
+  },
   upload: {
     config: {
       provider: 'aws-s3',
